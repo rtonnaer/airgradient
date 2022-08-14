@@ -33,6 +33,7 @@ MIT License
 #include <WiFiClient.h>
 #include <Wire.h>
 #include <SSD1306Wire.h>
+#include "ThingSpeak.h"
 
 AirGradient ag = AirGradient();
 
@@ -73,8 +74,9 @@ float temp = 0;
 int hum = 0;
 int displaypage = 0;
 
-String APIROOT = "http://hw.airgradient.com/";
-
+String APIURL = "http://api.thingspeak.com/update?api_key=";
+unsigned long CHANNELID = 1830200;
+const char * APIKEY = "J41M4TY7P0Z5MSCB";
 
 
 void setup()
@@ -184,26 +186,18 @@ void showTextRectangle(String ln1, String ln2, boolean small) {
 void sendToServer() {
    if (currentMillis - previoussendToServer >= sendToServerInterval) {
      previoussendToServer += sendToServerInterval;
-      String payload = "{\"wifi\":" + String(WiFi.RSSI())
-      + ", \"rco2\":" + String(Co2)
-      + ", \"pm02\":" + String(pm25)
-      + ", \"atmp\":" + String(temp)
-      + ", \"rhum\":" + String(hum)
-      + "}";
-
+     
       if(WiFi.status()== WL_CONNECTED){
-        Serial.println(payload);
-        String POSTURL = APIROOT + "sensors/airgradient:" + String(ESP.getChipId(), HEX) + "/measures";
-        Serial.println(POSTURL);
+
         WiFiClient client;
-        HTTPClient http;
-        http.begin(client, POSTURL);
-        http.addHeader("content-type", "application/json");
-        int httpCode = http.POST(payload);
-        String response = http.getString();
-        Serial.println(httpCode);
-        Serial.println(response);
-        http.end();
+        ThingSpeak.begin(client);  // Initialize ThingSpeak
+
+        ThingSpeak.setField(1, temp); // set field 1
+        ThingSpeak.setField(2,hum); // set field 2
+        ThingSpeak.setField(3,pm25); // set field 2
+        int httpCode = ThingSpeak.writeFields(CHANNELID,APIKEY); // Write fields
+        Serial.println(httpCode); // Check HTTP code
+       
       }
       else {
         Serial.println("WiFi Disconnected");
